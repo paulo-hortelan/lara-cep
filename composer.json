@@ -1,0 +1,89 @@
+{
+    "name": "paulo-hortelan/lara-cep",
+    "description": "Pacote Laravel para consulta de CEPs brasileiros com múltiplos provedores, cache e orquestração assíncrona opcional.",
+    "keywords": [
+        "paulo-hortelan",
+        "laravel",
+        "cep",
+        "zip-code",
+        "brasil"
+    ],
+    "homepage": "https://github.com/paulo-hortelan/lara-cep",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "paulo-hortelan",
+            "email": "paulohincar@gmail.com",
+            "role": "Desenvolvedor"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "guzzlehttp/guzzle": "^7.8",
+        "guzzlehttp/promises": "^2.2",
+        "illuminate/cache": "^10.0|^11.0|^12.0",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "spatie/laravel-package-tools": "^1.14.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^2.0.1",
+        "laravel/pint": "^1.0",
+        "nunomaduro/collision": "^7.8",
+        "orchestra/testbench": "^8.29",
+        "pestphp/pest": "^2.20",
+        "pestphp/pest-plugin-arch": "^2.0",
+        "pestphp/pest-plugin-laravel": "^2.0",
+        "phpstan/extension-installer": "^1.1",
+        "phpstan/phpstan-deprecation-rules": "^1.0",
+        "phpstan/phpstan-phpunit": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PauloHortelan\\LaraCep\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PauloHortelan\\LaraCep\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare",
+            "@composer run prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "analyse": "@php vendor/bin/phpstan analyse",
+        "test": "@php vendor/bin/pest",
+        "test-coverage": "@php vendor/bin/pest --coverage",
+        "format": "@php vendor/bin/pint",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "routes": "@php vendor/bin/testbench route:list --ansi",
+        "lint": [
+            "@php vendor/bin/pint",
+            "@php vendor/bin/phpstan analyse"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "PauloHortelan\\LaraCep\\LaraCepServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
