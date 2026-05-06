@@ -10,7 +10,6 @@ use GuzzleHttp\Promise\AggregateException;
 use GuzzleHttp\Promise\Utils;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use PauloHortelan\LaraCep\Contracts\ProviderInterface;
 use PauloHortelan\LaraCep\Exceptions\CepLookupException;
@@ -55,11 +54,6 @@ final class LaraCepManager
         return Address::fromArray($cached);
     }
 
-    public function lookup(string|int $cep): Address
-    {
-        return $this->find($cep);
-    }
-
     private function normalizeCep(string|int $cep): string
     {
         $sanitized = preg_replace('/\D+/', '', (string) $cep) ?? '';
@@ -92,7 +86,13 @@ final class LaraCepManager
         $promises = [];
 
         foreach ($providers as $provider) {
-            $promises[$provider->identifier()] = $provider->requestAsync($cep);
+            $identifier = $provider->identifier();
+            $promises[$identifier] = $provider
+                ->requestAsync($cep)
+                ->then(fn (array $result): array => $this->validateProviderPayload($result, $identifier))
+                ->otherwise(function (mixed $reason) use ($identifier): never {
+                    throw $this->toProviderException($reason, $identifier);
+                });
         }
 
         try {
@@ -102,16 +102,21 @@ final class LaraCepManager
             return Address::fromArray($result);
         } catch (AggregateException $exception) {
             $errors = [];
+            $reasons = $exception->getReason();
 
-            foreach ($exception->getReason() as $reason) {
-                $errors[] = $this->formatProviderError($reason);
+            if (is_array($reasons)) {
+                foreach ($reasons as $reason) {
+                    $errors[] = $this->formatProviderError($reason);
+                }
+            } else {
+                $errors[] = $this->formatProviderError($reasons);
             }
 
             throw new CepLookupException('All CEP providers returned an error.', $errors, 2);
         } catch (Throwable $exception) {
             throw new CepLookupException(
                 $exception->getMessage() !== '' ? $exception->getMessage() : 'Could not resolve CEP.',
-                [],
+                [$this->formatProviderError($exception)],
                 2,
             );
         }
@@ -129,7 +134,7 @@ final class LaraCepManager
                 /** @var array<string, mixed> $result */
                 $result = $provider->requestAsync($cep)->wait();
 
-                return Address::fromArray($result);
+                return Address::fromArray($this->validateProviderPayload($result, $provider->identifier()));
             } catch (Throwable $exception) {
                 $errors[] = $this->formatProviderError($exception, $provider->identifier());
             }
@@ -210,6 +215,53 @@ final class LaraCepManager
         }
 
         return $this->cacheFactory->store();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function validateProviderPayload(array $payload, string $provider): array
+    {
+        $resolvedProvider = trim((string) ($payload['provider'] ?? $provider));
+        $zipCode = preg_replace('/\D+/', '', (string) ($payload['zipCode'] ?? '')) ?? '';
+        $state = trim((string) ($payload['state'] ?? ''));
+        $city = trim((string) ($payload['city'] ?? ''));
+
+        if ($zipCode === '' || $state === '' || $city === '') {
+            throw new ProviderException(
+                $resolvedProvider !== '' ? $resolvedProvider : $provider,
+                'Provider returned an empty or invalid CEP payload.',
+            );
+        }
+
+        $payload['zipCode'] = $zipCode;
+        $payload['state'] = $state;
+        $payload['city'] = $city;
+        $payload['provider'] = $resolvedProvider !== '' ? $resolvedProvider : $provider;
+        $payload['district'] = isset($payload['district']) ? trim((string) $payload['district']) : null;
+        $payload['street'] = isset($payload['street']) ? trim((string) $payload['street']) : null;
+
+        return $payload;
+    }
+
+    private function toProviderException(mixed $reason, string $provider): ProviderException
+    {
+        if ($reason instanceof ProviderException) {
+            return $reason;
+        }
+
+        if ($reason instanceof Throwable) {
+            return new ProviderException(
+                $provider,
+                $reason->getMessage() !== '' ? $reason->getMessage() : 'Unknown provider error.',
+            );
+        }
+
+        return new ProviderException(
+            $provider,
+            is_string($reason) && $reason !== '' ? $reason : 'Unknown provider error.',
+        );
     }
 
     /**

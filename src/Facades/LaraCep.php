@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static \PauloHortelan\LaraCep\Address find(string|int $cep)
- * @method static \PauloHortelan\LaraCep\Address lookup(string|int $cep)
  */
 final class LaraCep extends Facade
 {

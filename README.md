@@ -1,5 +1,10 @@
 # Lara CEP
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/paulo-hortelan/lara-cep.svg?style=flat-square)](https://packagist.org/packages/paulo-hortelan/lara-cep)
+[![Tests](https://img.shields.io/github/actions/workflow/status/paulo-hortelan/lara-cep/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/paulo-hortelan/lara-cep/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![Code Style](https://img.shields.io/github/actions/workflow/status/paulo-hortelan/lara-cep/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/paulo-hortelan/lara-cep/actions?query=workflow%3A%22Fix+PHP+code+style+issues%22+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/paulo-hortelan/lara-cep.svg?style=flat-square)](https://packagist.org/packages/paulo-hortelan/lara-cep)
+
 `lara-cep` é um pacote Laravel para consultar CEPs brasileiros usando múltiplos provedores, com:
 
 - lista de provedores configurável
@@ -38,7 +43,7 @@ $address->provider; // via_cep, open_cep, brasil_api...
 Você também pode chamar:
 
 ```php
-$address = app('lara-cep')->lookup('01001000');
+$address = app('lara-cep')->find('01001000');
 ```
 
 ## Configuração

@@ -5,10 +5,12 @@ declare(strict_types=1);
 use PauloHortelan\LaraCep\Exceptions\CepLookupException;
 use PauloHortelan\LaraCep\Exceptions\InvalidCepException;
 use PauloHortelan\LaraCep\Facades\LaraCep;
+use PauloHortelan\LaraCep\Tests\Support\FakeEmptyProvider;
 use PauloHortelan\LaraCep\Tests\Support\FakeFailingProvider;
 use PauloHortelan\LaraCep\Tests\Support\FakeSuccessfulProvider;
 
 beforeEach(function (): void {
+    FakeEmptyProvider::$calls = 0;
     FakeSuccessfulProvider::$calls = 0;
     FakeFailingProvider::$calls = 0;
 });
@@ -142,6 +144,53 @@ it('throws lookup exception when all providers fail', function (): void {
                 'enabled' => true,
                 'class' => FakeFailingProvider::class,
                 'identifier' => 'fail_two',
+            ],
+        ],
+    ]);
+
+    expect(fn () => LaraCep::find('54321000'))
+        ->toThrow(CepLookupException::class, 'All CEP providers returned an error.');
+});
+
+it('falls back when provider returns empty payload in sequential mode', function (): void {
+    config()->set('lara-cep', [
+        'async' => false,
+        'cache' => ['enabled' => false],
+        'providers' => [
+            [
+                'enabled' => true,
+                'class' => FakeEmptyProvider::class,
+                'identifier' => 'empty_provider',
+            ],
+            [
+                'enabled' => true,
+                'class' => FakeSuccessfulProvider::class,
+                'identifier' => 'success_provider',
+            ],
+        ],
+    ]);
+
+    $address = LaraCep::find('54321000');
+
+    expect($address->provider)->toBe('success_provider')
+        ->and(FakeEmptyProvider::$calls)->toBe(1)
+        ->and(FakeSuccessfulProvider::$calls)->toBe(1);
+});
+
+it('throws lookup exception when all providers return empty payloads', function (): void {
+    config()->set('lara-cep', [
+        'async' => true,
+        'cache' => ['enabled' => false],
+        'providers' => [
+            [
+                'enabled' => true,
+                'class' => FakeEmptyProvider::class,
+                'identifier' => 'empty_one',
+            ],
+            [
+                'enabled' => true,
+                'class' => FakeEmptyProvider::class,
+                'identifier' => 'empty_two',
             ],
         ],
     ]);
